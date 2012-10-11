@@ -1,188 +1,90 @@
-{% macro pagination(report, url) %}
-      <div class="pagination">
-        <span class="totalItems">{{ report.total_count }}</span> Results &hellip;
-        {% if current_page > 1 %}
-        <a href="{{ current_url }}&amp;page={{ current_page - 1 }}">&larr; Prev</a>
-        {% endif %}
-        {% for page in range(1, report.total_pages + 1) %}
-          {% if page == current_page %}
-            <strong>{{ page }}</strong>
-          {% elif page > 2 and page < (report.total_pages - 2) %}
-            {% if current_page < 3 and page == 7 %}
-              &hellip;
-            {% elif current_page > 6 and page == 3 %}
-              &hellip;
-            {% elif page > (current_page - 3) and page < (current_page + 3) %}
-              <a href="{{ current_url }}&amp;page={{ page }}">{{ page }}</a>
-            {% elif page == (report.total_pages - 3) %}
-              &hellip;
-            {% endif %}
-          {% else %}
-            <a href="{{ current_url }}&amp;page={{ page }}">{{ page }}</a>
-          {% endif %}
-        {% endfor %}
-        {% if report.total_pages > current_page %}
-          <a href="{{ current_url }}&amp;page={{ current_page + 1 }}">Next &rarr;</a>
-        {% endif %}
-      </div>
-{%- endmacro %}
 <!DOCTYPE html>
-<html lang="{{ LANG }}" dir="{{ DIR }}" class="production">
-    <head>
-        <meta content="text/html; charset=UTF-8" http-equiv="Content-Type">
-        <title>{% block page_title %}Crash Data for {{ product }}{% endblock %}</title>
-
-        {% block site_css %}
-            {% compress css %}
-            <link href="{{ static('crashstats/css/screen.less') }}" type="text/less" rel="stylesheet">
-	    <link href="{{ static('auth/css/persona-button.css') }}" type="text/less" rel="stylesheet">
-            {% endcompress %}
-        {% endblock %}
-        <link href="{{ static('img/favicon.ico') }}" rel="icon" type="image/png" />
-    </head>
-    <body>
-    <div class="page-header">
-        <h1>
-            <a href="/">
-                <span class="icon"></span>
-                <span class="title">Mozilla Crash Reports</span>
-            </a>
-        </h1>
-
-        <form id="simple_search" method="get" action="{{ url('crashstats.query') }}">
-            <input type="hidden" name="query_type" value="simple">
-            <input type="hidden" name="do_query" value="1">
-            <input type="text" id="q" name="query" value="Find Crash ID or Signature">
-            <input type="submit" class="hidden">
-        </form>
-    </div>
-
-
-    <h1>Product Navigation</h1>
-
-    <div class="version-nav">
-        <input type="hidden" id="url_base" name="url_base" value="/products/{{ product }}" />
-        <input type="hidden" id="url_site" name="url_site" value="/" />
-
-        <ul class="filter">
-            <li>
-                Product:
-                <select id="products_select">
-                {% for r in currentversions|groupby('product') %}
-                    <option value="{{ r[0] }}" {% if r[0] == product %}selected{% endif %}>{{ r[0] }}</option>
-                {% endfor %}
-                </select>
-            </li>
-            <li class="version_select">
-                <select id="product_version_select" >
-                    <optgroup label=" ">
-                        <option value="Current Versions">Current Versions</option>
-                    </optgroup>
-                    <optgroup label=" ">
-                    {% for r in currentversions|groupby('product') %}
-                        {% if r[0] == product %}
-                            {% for v in r[1] %}
-                                {% if v.featured %}
-                                    <option value="{{ v.version }}" {% if v.version == version %}selected{% endif %}>{{ v.version }}</option>
-                                {% endif %}
-                            {% endfor  %}
-                        {% endif  %}
-                    {% endfor %}
-                    </optgroup>
-                    <optgroup label=" ">
-                    {% for r in currentversions|groupby('product') %}
-                        {% if r[0] == product %}
-                            {% for v in r[1] %}
-                                {% if not v.featured %}
-                                    <option value="{{ v.version }}" {% if v.version == version %}selected{% endif %}>{{ v.version }}</option>
-                                {% endif %}
-                            {% endfor  %}
-                        {% endif  %}
-                    {% endfor %}
-                    </optgroup>
-                </select>
-            </li>
-            <li>
-                <label>Report:</label>
-                <select id="report_select" >
-                    <optgroup label=" ">
-                        <option value="{{ url('crashstats.home', product) }}" {% if report == 'products' %}selected{% endif %}>Overview</option>
-                    </optgroup>
-                    <optgroup label=" ">
-                        <option value="{{ url('crashstats.daily', product) }}" {% if report == 'daily' %}selected{% endif %}>Crashes per User</option>
-                        <option value="{{ url('crashstats.builds', product) }}" {% if report == 'builds' %}selected{% endif %}>Nightly Builds</option>
-                        <option value="{{ url('crashstats.hangreport', product) }}" {% if report == 'hangreport' %}selected{% endif %}>Hang Report</option>
-                    </optgroup>
-                    <optgroup label=" ">
-                        <option value="{{ url('crashstats.topchangers', product) }}" {% if report == 'topchangers' %}selected{% endif %}>Top Changers</option>
-                        <option value="{{ url('crashstats.topcrasher', product) }}" {% if report == 'topcrasher' %}selected{% endif %}>Top Crashers</option>
-                    </optgroup>
-                </select>
-            </li>
-        </ul>
-
-        <div class="search">
-            <a href="{{ url('crashstats.query') }}#advanced">Advanced Search</a>
-        </div>
-    </div>
-
-
-        {% if messages %}
-            {% for message in messages %}
-              <div class="message {% if message.tags %}{{ message.tags }}{% endif %}">
-                {{ message }}
-              </div>
-            {% endfor %}
-        {% endif %}
-
-        {% block content %}{% endblock %}
-        <div id="footer" class="page-footer">
-            <div class="nav">
-            <div class="about">
-                <strong>Mozilla Crash Reports</strong> - Powered by <a href="https://github.com/mozilla/socorro">Socorro</a> - All dates are UTC
-            </div>
-            <ul>
-                <li><a href="{{ url('crashstats.status') }}">Server Status</a></li>
-                <li><a href="http://socorro.readthedocs.org/">Project Info</a></li>
-                <li><a href="https://github.com/mozilla/socorro">Source Code</a></li>
-                <li><a href="http://wiki.mozilla.org/Breakpad">Breakpad Wiki</a></li>
-                <li><a href="http://www.mozilla.org/about/policies/privacy-policy.html">Privacy Policy</a></li>
-            </ul>
-        </div>
-
-
-        <div class="login">
-            <ul>
-                <li>
-                    {% if request.user.is_active %}
-                      {{ request.user.email }}
-                      |
-                      <a href="/admin">Admin</a>
-                      |
-                      <a href="{{ url('auth:logout') }}">Sign out</a>
-                    {% else %}
-                      <a href="#" class="persona-button dark" id="browserid"
-                         title="Sign in with Persona">
-                        <span>Sign in</span>
-                      </a>
-                      <form method="post" action="{{ url('auth:mozilla_browserid_verify') }}">
-                        {{ csrf() }}
-                        {{ browserid_form.as_p() }}
-                      </form>
-                    {% endif %}
-                </li>
-	    </ul>
-        </div>
-    </div>
-    {% block site_js %}
-    {% compress js %}
-    <script src="{{ static('crashstats/js/jquery/jquery-1.6.4.min.js') }}"></script>
-    <script src="{{ static('crashstats/js/jquery/plugins/jquery.cookies.2.2.0.js') }}"></script>
-    <script src="{{ static('crashstats/js/socorro/nav.js') }}"></script>
-    {% endcompress %}
-    {% if not request.user.is_active %}
-      {{ browserid_form.media }}
-    {% endif %}
-    {% endblock %}
-  </body>
+<html dir="{{ DIR }}" lang="{{ LANG }}">
+	<head>
+	</head>
+	<body>
+		<p>
+			GitHub GitHub  Explore Gist Blog Help satdav 14 12 public mozilla / socorro-crashstats Code Network Pull Requests 7 Graphs Tags Downloads Files Commits Branches 1 socorro-crashstats / crashstats / base / templates / crashstats_base.html peterbe 7 days ago bug 788054 - persona authentication, r=rhelmer 5 contributors file 189 lines (176 sloc) 8.387 kb 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25 26 27 28 29 30 31 32 33 34 35 36 37 38 39 40 41 42 43 44 45 46 47 48 49 50 51 52 53 54 55 56 57 58 59 60 61 62 63 64 65 66 67 68 69 70 71 72 73 74 75 76 77 78 79 80 81 82 83 84 85 86 87 88 89 90 91 92 93 94 95 96 97 98 99 100 101 102 103 104 105 106 107 108 109 110 111 112 113 114 115 116 117 118 119 120 121 122 123 124 125 126 127 128 129 130 131 132 133 134 135 136 137 138 139 140 141 142 143 144 145 146 147 148 149 150 151 152 153 154 155 156 157 158 159 160 161 162 163 164 165 166 167 168 169 170 171 172 173 174 175 176 177 178 179 180 181 182 183 184 185 186 187 188 {% macro pagination(report, url) %}</p>
+		<div class="pagination">
+			<span class="totalItems">{{ report.total_count }}</span> Results &hellip; {% if current_page &gt; 1 %} <a href="{{ current_url }}&amp;page={{ current_page - 1 }}">&larr; Prev</a> {% endif %} {% for page in range(1, report.total_pages + 1) %} {% if page == current_page %} <strong>{{ page }}</strong> {% elif page &gt; 2 and page &lt; (report.total_pages - 2) %} {% if current_page &lt; 3 and page == 7 %} &hellip; {% elif current_page &gt; 6 and page == 3 %} &hellip; {% elif page &gt; (current_page - 3) and page &lt; (current_page + 3) %} <a href="{{ current_url }}&amp;page={{ page }}">{{ page }}</a> {% elif page == (report.total_pages - 3) %} &hellip; {% endif %} {% else %} <a href="{{ current_url }}&amp;page={{ page }}">{{ page }}</a> {% endif %} {% endfor %} {% if report.total_pages &gt; current_page %} <a href="{{ current_url }}&amp;page={{ current_page + 1 }}">Next &rarr;</a> {% endif %}</div>
+		<p>
+			{%- endmacro %}</p>
+	</body>
 </html>
+<meta content="text/html; charset=UTF-8" http-equiv="Content-Type" />
+<title>{% block page_title %}Crash Data for {{ product }}{% endblock %}</title>
+<html dir="{{ DIR }}" lang="{{ LANG }}">
+	<body>
+		<p>
+			{% block site_css %} {% compress css %}</p>
+	</body>
+</html>
+<link href="{{ static('crashstats/css/screen.less') }}" rel="stylesheet" type="text/less" />
+<link href="{{ static('auth/css/persona-button.css') }}" rel="stylesheet" type="text/less" />
+<html dir="{{ DIR }}" lang="{{ LANG }}">
+	<body>
+		<p>
+			{% endcompress %} {% endblock %}</p>
+	</body>
+</html>
+<link href="{{ static('img/favicon.ico') }}" rel="icon" type="image/png" />
+<body>
+	<div class="page-header">
+		<h1>
+			<a href="/"> <span class="title">Mozilla Crash Reports</span> </a></h1>
+		<form action="{{ url('crashstats.query') }}" id="simple_search" method="get">
+			<input name="query_type" type="hidden" value="simple" /> <input name="do_query" type="hidden" value="1" /> <input id="q" name="query" type="text" value="Find Crash ID or Signature" /> <input class="hidden" type="submit" />&nbsp;</form>
+	</div>
+	<h1>
+		Product Navigation</h1>
+	<div class="version-nav">
+		<input id="url_base" name="url_base" type="hidden" value="/products/{{ product }}" /> <input id="url_site" name="url_site" type="hidden" value="/" />
+		<ul class="filter">
+			<li>
+				Product: <select id="products_select"> {% for r in currentversions|groupby(&#39;product&#39;) %}<option endif="" if="" product="" value="{{ r[0] }}">{{ r[0] }}</option>{% endfor %} </select></li>
+			<li class="version_select">
+				<select id="product_version_select"> <optgroup label=" "><option value="Current Versions">Current Versions</option></optgroup> <optgroup label=" "> {% for r in currentversions|groupby(&#39;product&#39;) %} {% if r[0] == product %} {% for v in r[1] %} {% if v.featured %}<option endif="" if="" v.version="=" value="{{ v.version }}" version="">{{ v.version }}</option>{% endif %} {% endfor %} {% endif %} {% endfor %} </optgroup> <optgroup label=" "> {% for r in currentversions|groupby(&#39;product&#39;) %} {% if r[0] == product %} {% for v in r[1] %} {% if not v.featured %}<option endif="" if="" v.version="=" value="{{ v.version }}" version="">{{ v.version }}</option>{% endif %} {% endfor %} {% endif %} {% endfor %} </optgroup> </select></li>
+			<li>
+				<label>Report:</label> <select id="report_select"> <optgroup label=" "><option endif="" if="" report="=" value="{{ url('crashstats.home', product) }}">Overview</option></optgroup> <optgroup label=" "><option endif="" if="" report="=" value="{{ url('crashstats.daily', product) }}">Crashes per User</option><option endif="" if="" report="=" value="{{ url('crashstats.builds', product) }}">Nightly Builds</option><option endif="" if="" report="=" value="{{ url('crashstats.hangreport', product) }}">Hang Report</option></optgroup> <optgroup label=" "><option endif="" if="" report="=" value="{{ url('crashstats.topchangers', product) }}">Top Changers</option><option endif="" if="" report="=" value="{{ url('crashstats.topcrasher', product) }}">Top Crashers</option></optgroup> </select></li>
+		</ul>
+		<div class="search">
+			<a href="{{ url('crashstats.query') }}#advanced">Advanced Search</a></div>
+	</div>
+	<p>
+		{% if messages %} {% for message in messages %}</p>
+	<div class="message {% if message.tags %}{{ message.tags }}{% endif %}">
+		{{ message }}</div>
+	<p>
+		{% endfor %} {% endif %} {% block content %}{% endblock %}</p>
+	<div class="page-footer" id="footer">
+		<div class="nav">
+			<div class="about">
+				<strong>Mozilla Crash Reports</strong> - Powered by<strong> <a href="https://github.com/mozilla/socorro">Socorro</a> </strong>- All dates are UTC</div>
+			<ul>
+				<li>
+					<strong><a href="{{ url('crashstats.status') }}">Server Status</a></strong></li>
+				<li>
+					<strong><a href="http://socorro.readthedocs.org/">Project Info</a></strong></li>
+				<li>
+					<strong><a href="https://github.com/mozilla/socorro">Source Code</a></strong></li>
+				<li>
+					<strong><a href="http://wiki.mozilla.org/Breakpad">Breakpad Wiki</a></strong></li>
+				<li>
+					<strong><a href="http://www.mozilla.org/about/policies/privacy-policy.html">Privacy Policy</a></strong></li>
+			</ul>
+		</div>
+		<div class="login">
+			<ul>
+				<li>
+					{% if request.user.is_active %} {{ request.user.email }} | <strong><a href="/admin">Admin</a> | <a href="{{ url('auth:logout') }}">Sign out</a></strong> {% else %} <strong><a class="persona-button dark" href="#" id="browserid" title="Sign in with Persona"> <span>Sign in</span> </a></strong>
+					<form action="{{ url('auth:mozilla_browserid_verify') }}" method="post">
+						{{ csrf() }} {{ browserid_form.as_p() }}</form>
+					{% endif %}</li>
+			</ul>
+		</div>
+	</div>
+	<p>
+		{% block site_js %} {% compress js %} <script src="{{ static('crashstats/js/jquery/jquery-1.6.4.min.js') }}"></script><script src="{{ static('crashstats/js/jquery/plugins/jquery.cookies.2.2.0.js') }}"></script><script src="{{ static('crashstats/js/socorro/nav.js') }}"></script>{% endcompress %} {% if not request.user.is_active %} {{ browserid_form.media }} {% endif %} {% endblock %}</p>
+	<p>
+		GitHub Links GitHub About Blog Features Contact &amp; Support Training GitHub Enterprise Site Status Clients GitHub for Mac GitHub for Windows GitHub for Eclipse GitHub Mobile Apps Tools Gauges: Web analytics Speaker Deck: Presentations Gist: Code snippets Extras Job Board GitHub Shop The Octodex Documentation GitHub Help Developer API GitHub Flavored Markdown GitHub Pages Terms of Service Privacy Security &copy; 2012 GitHub Inc. All rights reserved.</p>
+</body>
